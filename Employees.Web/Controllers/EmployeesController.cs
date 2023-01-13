@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Employees.Web.Data;
 using Employees.Web.Models;
+using System.Text.RegularExpressions;
 
 namespace Employees.Web.Controllers
 {
@@ -22,7 +23,7 @@ namespace Employees.Web.Controllers
         // GET: Employees
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Employees.ToListAsync());
+            return View(await _context.Employees.OrderBy(e => e.BornDate).ToListAsync());
         }
 
         // GET: Employees/Details/5
@@ -56,13 +57,58 @@ namespace Employees.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("ID,Name,LastName,RFC,BornDate,Status")] Employee employee)
         {
+
+
+
             if (ModelState.IsValid)
             {
-                _context.Add(employee);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    employee.RFC = employee.RFC.ToUpper();
+                    if (IsValidRFC(employee.RFC))
+                    {
+                        _context.Add(employee);
+                        await _context.SaveChangesAsync();
+                        return RedirectToAction(nameof(Index));
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, "The RFC is not valid.");
+                    }
+                  
+                }
+                catch (DbUpdateException dbUpdateException)
+                {
+                    if (dbUpdateException.InnerException.Message.Contains("duplicate"))
+                    {
+                        ModelState.AddModelError(string.Empty, "There are a record with the same RFC.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, dbUpdateException.InnerException.Message);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
+
+              
             }
             return View(employee);
+        }
+
+        private bool IsValidRFC(string rFC)
+        {
+
+            if (Regex.IsMatch(rFC, "[A-z]{4}[0-9]{6}[A-z0-9]{3}") || Regex.IsMatch(rFC, "[A-z]{3}[0-9]{6}[A-z0-9]{3}"))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         // GET: Employees/Edit/5
@@ -97,21 +143,35 @@ namespace Employees.Web.Controllers
             {
                 try
                 {
-                    _context.Update(employee);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!EmployeeExists(employee.ID))
+
+                    employee.RFC = employee.RFC.ToUpper();
+                    if (IsValidRFC(employee.RFC))
                     {
-                        return NotFound();
+                        _context.Update(employee);
+                        await _context.SaveChangesAsync();
+                        return RedirectToAction(nameof(Index));
                     }
                     else
                     {
-                        throw;
+                        ModelState.AddModelError(string.Empty, "The RFC is not valid.");
+                    }
+                
+                }
+                catch (DbUpdateException dbUpdateException)
+                {
+                    if (dbUpdateException.InnerException.Message.Contains("duplicate"))
+                    {
+                        ModelState.AddModelError(string.Empty, "There are a record with the same RFC.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, dbUpdateException.InnerException.Message);
                     }
                 }
-                return RedirectToAction(nameof(Index));
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
             }
             return View(employee);
         }
