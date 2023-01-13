@@ -100,7 +100,7 @@ namespace Employees.Web.Controllers
 
         private bool IsValidRFC(string rFC)
         {
-
+            
             if (Regex.IsMatch(rFC, "[A-z]{4}[0-9]{6}[A-z0-9]{3}") || Regex.IsMatch(rFC, "[A-z]{3}[0-9]{6}[A-z0-9]{3}"))
             {
                 return true;
