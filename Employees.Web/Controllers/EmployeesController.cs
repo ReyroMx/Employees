@@ -65,16 +65,15 @@ namespace Employees.Web.Controllers
                 try
                 {
                     employee.RFC = employee.RFC.ToUpper();
-                    if (IsValidRFC(employee.RFC))
+                    string errorMsg = string.Empty;
+                    if (IsValidRFC(employee.RFC, employee.BornDate, out errorMsg))
                     {
                         _context.Add(employee);
                         await _context.SaveChangesAsync();
                         return RedirectToAction(nameof(Index));
                     }
-                    else
-                    {
-                        ModelState.AddModelError(string.Empty, "The RFC is not valid.");
-                    }
+        
+                    ModelState.AddModelError(string.Empty, errorMsg);
                   
                 }
                 catch (DbUpdateException dbUpdateException)
@@ -98,15 +97,30 @@ namespace Employees.Web.Controllers
             return View(employee);
         }
 
-        private bool IsValidRFC(string rFC)
+        private bool IsValidRFC(string rFC,DateTime BornDate, out string errorMsg)
         {
-            
+
             if (Regex.IsMatch(rFC, "[A-z]{4}[0-9]{6}[A-z0-9]{3}") || Regex.IsMatch(rFC, "[A-z]{3}[0-9]{6}[A-z0-9]{3}"))
             {
-                return true;
+                int year = int.Parse(rFC.Substring(rFC.Length - 9, 2));
+                int month = int.Parse(rFC.Substring(rFC.Length - 7, 2));
+                int day = int.Parse(rFC.Substring(rFC.Length - 5, 2));
+
+                int BornDay = BornDate.Day;
+                int BornMonth = BornDate.Month;
+                int BornYear = int.Parse(BornDate.Year.ToString().Substring(2));
+
+                if (day.Equals(BornDay) && month.Equals(BornMonth) && (year.Equals(BornYear)))
+                {
+                    errorMsg = "The RFC is correct";
+                    return true;
+                }
+                errorMsg = "The RFC does not match the born date";
+                return false;
             }
             else
             {
+                errorMsg = "The RFC format is not valid";
                 return false;
             }
         }
@@ -144,8 +158,8 @@ namespace Employees.Web.Controllers
                 try
                 {
 
-                    employee.RFC = employee.RFC.ToUpper();
-                    if (IsValidRFC(employee.RFC))
+                    string errorMsg = string.Empty;
+                    if (IsValidRFC(employee.RFC, employee.BornDate, out errorMsg))
                     {
                         _context.Update(employee);
                         await _context.SaveChangesAsync();
@@ -153,7 +167,7 @@ namespace Employees.Web.Controllers
                     }
                     else
                     {
-                        ModelState.AddModelError(string.Empty, "The RFC is not valid.");
+                        ModelState.AddModelError(string.Empty, errorMsg);
                     }
                 
                 }
